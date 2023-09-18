@@ -409,20 +409,22 @@ wget.callbacks.write_to_warc = function(url, http_stat)
     error("No item name found.")
   end
   is_initial_url = false
-  if string.match(url["url"], "^https?://api%.gfycat%.com/") then
+  if string.match(url["url"], "^https?://api%.zowa%.app/") then
     local html = read_file(http_stat["local_file"])
-    if not (string.match(html, "^%s*{") and string.match(html, "}%s*$"))
-      and not (string.match(html, "^%s*%[") and string.match(html, "%]%s*$")) then
+    if not (
+        string.match(html, "^%s*{")
+        and string.match(html, "}%s*$")
+      )
+      and not (
+        string.match(html, "^%s*%[")
+        and string.match(html, "%]%s*$")
+      ) then
       print("Did not get JSON data.")
       retry_url = true
       return false
     end
     local json = cjson.decode(html)
-    if json["status"] and json["status"] ~= "ok" then
-      print("Problem with JSON.")
-      retry_url = true
-      return false
-    end
+    -- do nothing, the above loading checked if this worked well
   end
   if http_stat["statcode"] ~= 200
     and http_stat["statcode"] ~= 301
