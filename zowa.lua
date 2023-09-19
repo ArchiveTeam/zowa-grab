@@ -25,6 +25,8 @@ local discovered_items = {}
 local bad_items = {}
 local ids = {}
 
+local thread_counts = {}
+
 local retry_url = false
 local is_initial_url = true
 
@@ -87,7 +89,7 @@ find_item = function(url)
       ["zowa.app/feature/"]="feature",
       ["zowa.app/search/result?tag="]="tag",
       ["zowa.app/audios/"]="audio",
-      ["zowa.app/threads/"]="thread",
+      ["zowa.app/zch/threads/"]="thread",
       ["zowa.app/videos/"]="video"
     }
     type_ = types[s]
@@ -362,9 +364,42 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
       check("https://api.zowa.app/api/v2/users/" .. item_value .. "/total_like")
       check("https://api.zowa.app/api/v2/users/pwa/" .. item_value .. "/all_videos_count")
       check("https://api.zowa.app/api/v2/users/" .. item_value .. "/likes")
+      check("https://api.zowa.app/api/v2/users/" .. item_value)
     end
     if item_type == "feature" then
       check("https://api.zowa.app/api/v2/videos/feature/" .. item_value)
+    end
+    if item_type == "play" then
+      check("https://api.zowa.app/api/v2/videos/pwa/" .. item_value)
+    end
+    if item_type == "tag" then
+      check("https://api.zowa.app/api/v2/tags/" .. item_value)
+      -- credit for API use to yts98
+      for _, duration in pairs({"&duration_start=30", "&duration_end=30", "&duration_end=10", ""}) do
+        for _, voice_kinds in pairs({"1,2,0", "2,0", "1,0", "1,2", "0", "2", "1", ""}) do
+          check("https://api.zowa.app/api/v2/videos/pwa?sort=new&tags=" .. item_value .. duration .. (string.len(voice_kinds) >= 1 and ("&voice_kinds=" .. voice_kinds) or ""))
+        end
+      end
+    end
+    if item_type == "thread" then
+      check("https://api.zowa.app/api/v2/zch_threads/" .. item_value .. "?fields=zch_thread.user,zch_thread.comments,zch_thread.is_liked")
+      for _, sort in pairs({"popular", "new", "old"}) do
+        check("https://api.zowa.app/api/v2/zch_threads/" .. item_value .. "/comments?fields=zch_comment.is_liked,zch_comment.user&sort=" .. sort)
+        check("https://api.zowa.app/api/v2/zch_threads/" .. item_value .. "/comments?fields=zch_comment.is_liked,zch_comment.user&sort=" .. sort .. "&limit=40")
+      end
+    end
+    if string.match(url, "/comments%?fields=.+&limit=[0-9]+$") then
+      local json = cjson.decode(html)
+      local count = 0
+      for _, d in pairs(json['data']) do
+        count = count + 1
+      end
+      local base = string.match(url, "^https?://(.+)&limit=[0-9]+$")
+      if thread_counts[base] ~= count then
+        local limit = tonumber(string.match(url, "([0-9]+)$"))
+        thread_counts[base] = count
+        check_new_params(url, "limit", tostring(limit+20))
+      end
     end
     if string.match(url, "/api/v2/videos/feature/") then
       local json = cjson.decode(html)
@@ -372,6 +407,9 @@ wget.callbacks.get_urls = function(file, url, is_css, iri)
       for _, d in pairs(json["videos"]) do
         check("https://zowa.app/play/" .. d["id"] .. "?list=" .. json["list_id"])
       end
+    end
+    if string.match(url, "^https?://api%.zowa%.app/") then
+      html = html .. flatten_json(cjson.decode(html))
     end
     for newurl in string.gmatch(string.gsub(html, "&quot;", '"'), '([^"]+)') do
       checknewurl(newurl)
@@ -427,7 +465,6 @@ wget.callbacks.write_to_warc = function(url, http_stat)
     -- do nothing, the above loading checked if this worked well
   end
   if http_stat["statcode"] ~= 200
-    and http_stat["statcode"] ~= 301
     and http_stat["statcode"] ~= 404 then
     retry_url = true
     return false

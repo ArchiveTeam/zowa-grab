@@ -59,7 +59,7 @@ if not WGET_AT:
 #
 # Update this each time you make a non-cosmetic change.
 # It will be added to the WARC files and reported to the tracker.
-VERSION = '20230918.02'
+VERSION = '20230919.01'
 USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/116.0'
 TRACKER_ID = 'zowa'
 TRACKER_HOST = 'legacy-api.arpa.li'
@@ -299,15 +299,15 @@ class WgetArgs(object):
             elif item_type == 'feature':
                 wget_args.extend(['--warc-header', 'zowa-feature: '+item_value])
                 wget_args.append('https://zowa.app/feature/'+item_value)
-            #elif item_type == 'tag':
-            #    wget_args.extend(['--warc-header', 'zowa-tag: '+item_value])
-            #    wget_args.append('https://zowa.app/search/result?tag='+item_value)
+            elif item_type == 'tag':
+                wget_args.extend(['--warc-header', 'zowa-tag: '+item_value])
+                wget_args.append('https://zowa.app/search/result?tag='+item_value)
             elif item_type == 'audio':
                 wget_args.extend(['--warc-header', 'zowa-audio: '+item_value])
                 wget_args.append('https://zowa.app/audios/'+item_value)
-            #elif item_type == 'thread':
-            #    wget_args.extend(['--warc-header', 'zowa-thread: '+item_value])
-            #    wget_args.append('https://zowa.app/threads/'+item_value)
+            elif item_type == 'thread':
+                wget_args.extend(['--warc-header', 'zowa-thread: '+item_value])
+                wget_args.append('https://zowa.app/zch/threads/'+item_value)
             elif item_type == 'video':
                 wget_args.extend(['--warc-header', 'zowa-video: '+item_value])
                 wget_args.append('https://zowa.app/videos/'+item_value)
